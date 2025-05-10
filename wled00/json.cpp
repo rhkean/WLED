@@ -558,8 +558,7 @@ bool deserializeState(JsonObject root, byte callMode, byte presetId)
           dnsServer.stop();
           WiFi.softAPdisconnect(pwrOff);
           apActive = false;
-        }
-        if (Network.isConnected()) {
+        } else if (Network.isConnected()) {
           WiFi.disconnect(pwrOff);
         }
       }
