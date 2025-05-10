@@ -564,7 +564,7 @@ bool deserializeState(JsonObject root, byte callMode, byte presetId)
         }
       }
       wifiEnabled = forceReconnect = sta;
-     wifiPower = sta | !pwrOff;
+      wifiPower = sta | !pwrOff;
     }
   }
 
