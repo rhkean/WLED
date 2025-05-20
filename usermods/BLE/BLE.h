@@ -5,7 +5,7 @@
 #define WLED_BLE_SERVICE_UUID        "01FA0001-46C9-4507-84BB-F2BE3F24C47A"
 #define WLED_BLE_CHARACTERISTIC_UUID "01FA0002-46C9-4507-84BB-F2BE3F24C47A"
 #include "wled.h"
-#include <NimBLEDevice.h>
+#include "NimBLEDevice.h"
 
 class BLEUsermod : public Usermod
                         , NimBLEServerCallbacks
@@ -59,7 +59,7 @@ class BLEUsermod : public Usermod
     void enable(bool enable) { enabled = enable; }
     bool isEnabled() {return enabled; }
     bool isAdvertising(){return NimBLEDevice::getAdvertising()->isAdvertising();}
-    size_t isConnected(){return NimBLEDevice::getCreatedClientCount();}
+    uint8_t isConnected(){return pServer->getConnectedCount();}
 
     // NimBLEServer Callbacks
     void onAuthenticationComplete(NimBLEConnInfo& connInfo) override;
