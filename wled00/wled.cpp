@@ -11,6 +11,10 @@
 #include "soc/rtc_cntl_reg.h"
 #endif
 
+#ifdef USERMOD_BLE
+#include "BLE.h"
+#endif
+
 extern "C" void usePWMFixedNMI();
 
 /*
@@ -267,6 +271,14 @@ void WLED::loop()
       DEBUG_PRINTF_P(PSTR("UM time[ms]: %u/%lu\n"),   avgUsermodMillis/loops, maxUsermodMillis);
       DEBUG_PRINTF_P(PSTR("Strip time[ms]:%u/%lu\n"), avgStripMillis/loops,   maxStripMillis);
     }
+    #ifdef USERMOD_BLE
+    BLEUsermod* ble = (BLEUsermod*)UsermodManager::lookup(USERMOD_ID_BLE);
+    DEBUG_PRINTF_P(PSTR("BLE enabled: %d\n"), ble->isEnabled());
+    if(ble->isEnabled())
+    {
+      DEBUG_PRINTF_P(PSTR("BLE advertising started: %d\n"), ble->isAdvertising());
+    }
+    #endif
     strip.printSize();
     server.printStatus(DEBUGOUT);
     loops = 0;
