@@ -277,6 +277,7 @@ void WLED::loop()
     if(ble->isEnabled())
     {
       DEBUG_PRINTF_P(PSTR("BLE advertising started: %d\n"), ble->isAdvertising());
+      DEBUG_PRINTF_P(PSTR("BLE connected clients: %d\n"), ble->isConnected());
     }
     #endif
     strip.printSize();
