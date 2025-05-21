@@ -63,6 +63,7 @@ class BLEUsermod : public Usermod
     // NimBLEDescriptor Callbacks
     void onWrite(NimBLEDescriptor* pDescriptor, NimBLEConnInfo& connInfo) override;
     void onRead(NimBLEDescriptor* pDescriptor, NimBLEConnInfo& connInfo) override;
+    void onAdvComplete(NimBLEAdvertising* pAdvertising);
 };
 #endif
 #endif
