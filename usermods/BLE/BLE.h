@@ -27,7 +27,7 @@ class BLEUsermod : public Usermod
     NimBLEService*        pService            = nullptr;
     NimBLECharacteristic* pCharacteristic     = nullptr;
  
-    void shutdownWiFi();
+    //void shutdownWiFi();
     void DEBUG_STATUS();
     void test(NimBLEAdvertising* pAdvertising);
 
@@ -41,21 +41,8 @@ class BLEUsermod : public Usermod
     void addToConfig(JsonObject &root) override;
     //bool handleButton(uint8_t b) override;
     uint16_t getId() override {return USERMOD_ID_BLE;}
-    void start()
-    {
-        if(enabled)
-        {
-            DEBUG_PRINTLN(F("starting BLE"));
-            NimBLEDevice::startAdvertising();
-        }
-    }
-    void stop()
-    {
-        DEBUG_PRINTLN(F("stopping BLE..."));
-        NimBLEDevice::stopAdvertising();
-        while (isAdvertising());
-        DEBUG_PRINTLN(F("BLE stopped"));
-    }
+    void start();
+    void stop();
     void enable(bool enable) { enabled = enable; }
     bool isEnabled() {return enabled; }
     bool isAdvertising(){return NimBLEDevice::getAdvertising()->isAdvertising();}
