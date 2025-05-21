@@ -61,6 +61,7 @@ void BLEUsermod::setup()
             {
                 DEBUG_PRINTLN(F("BLE server created"));
                 pServer->setCallbacks(this);
+                pServer->advertiseOnDisconnect(true);
                 pService = pServer->createService(WLED_BLE_SERVICE_UUID);
                 if(pService)
                 {
@@ -96,35 +97,36 @@ void BLEUsermod::setup()
         } else {
             DEBUG_PRINTLN(F("Unable to initialize NimBLE"));
         }
+    }
+    if(initDone && !isAdvertising())
+    {
+        NimBLEAdvertising* pAdvertising = pServer->getAdvertising();
+        pAdvertising->setName(serverDescription);
+        pAdvertising->addServiceUUID(WLED_BLE_SERVICE_UUID);
+        DEBUG_PRINTLN(F("BLE about to pAdvertising->enableScanResponse(true)"));
+        pAdvertising->enableScanResponse(true);
+        DEBUG_PRINTLN(F("BLE starting advertising"));
+        pAdvertising->setAdvertisingCompleteCallback(std::bind(&BLEUsermod::test, this, std::placeholders::_1));
 
-        if(pService->isStarted() && !isAdvertising() && !apActive && !WiFi.isConnected())
+        if(pAdvertising->start())
         {
-            NimBLEAdvertising* pAdvertising = pServer->getAdvertising();
-            pAdvertising->setName(serverDescription);
-            pAdvertising->addServiceUUID(WLED_BLE_SERVICE_UUID);
-            DEBUG_PRINTLN(F("BLE about to pAdvertising->enableScanResponse(true)"));
-            pAdvertising->enableScanResponse(true);
-            DEBUG_PRINTLN(F("BLE starting advertising"));
-            pAdvertising->setAdvertisingCompleteCallback(std::bind(&BLEUsermod::test, this, std::placeholders::_1));
-
-            if(pAdvertising->start())
-            {
-                DEBUG_PRINTLN(F("BLE advertising started"));
-            } else {
-                DEBUG_PRINTLN(F("Unable to start BLE advertising"));
-            }
+            DEBUG_PRINTLN(F("BLE advertising started"));
         } else {
-            DEBUG_PRINTLN(F("BLE advertising not started"));
-            DEBUG_STATUS();
+            DEBUG_PRINTLN(F("Unable to start BLE advertising"));
         }
     }
-}
+ }
   
 void BLEUsermod::loop()
 {
     // if usermod is disabled or called during strip updating just exit
     // NOTE: on very long strips strip.isUpdating() may always return true so update accordingly
-    if (!enabled || strip.isUpdating()) return;
+    if (strip.isUpdating()) return;
+    if(!enabled)
+    {
+        if(isAdvertising()) stop();
+        return;
+    }
     if (!initDone){
         DEBUG_PRINTLN(F("BLE init not completed, calling setup from loop()"));
         setup();
@@ -197,6 +199,40 @@ void BLEUsermod::addToConfig(JsonObject &root)
     DEBUG_STATUS();
     JsonObject top = root.createNestedObject(FPSTR(_name));
     top[FPSTR(_enabled)] = enabled;
+}
+
+void BLEUsermod::start()
+{
+    if(isAdvertising() || isConnected()) return;
+    if(enabled)
+    {
+        if(!initDone)
+            setup();
+        else
+        {
+            DEBUG_PRINTLN(F("starting BLE"));
+            if(NimBLEDevice::startAdvertising())
+                DEBUG_PRINTLN(F("BLE started"));
+            else
+                DEBUG_PRINTLN(F("BLE start failed"));
+        }
+    }
+}
+
+void BLEUsermod::stop()
+{
+    if(!isAdvertising() && !isConnected()) return;
+    DEBUG_PRINTLN(F("stopping BLE..."));
+    std::vector<uint16_t> peers = pServer->getPeerDevices();
+    for(uint16_t handle: peers)
+    {
+        DEBUG_PRINTF_P(PSTR("Disconnecting peer %u\n"), handle);
+        pServer->disconnect(handle);
+    }
+    if(NimBLEDevice::stopAdvertising())
+        DEBUG_PRINTLN(F("BLE stopped"));
+    else
+        DEBUG_PRINTLN(F("BLE stop failed"));
 }
 
 // NimBLEServerCallbacks overrides

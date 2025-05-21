@@ -7,7 +7,7 @@
       {
         "owner": "h2zero",      
         "name": "NimBLE-Arduino",
-        "version": "^2.2.3"
+        "version": "~2.2.3"
       }
     ]
 }
