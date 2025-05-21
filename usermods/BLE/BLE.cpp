@@ -11,29 +11,21 @@ void BLEUsermod::DEBUG_STATUS()
     DEBUG_PRINTF_P(PSTR("BLE enabled: %d\n"), enabled);
     if(initDone)
     {
+        NimBLEConnInfo connInfo = pServer->getPeerInfo(0);
         DEBUG_PRINTF_P(PSTR("BLE advertising: %d\n"), isAdvertising());
         DEBUG_PRINTF_P(PSTR("BLE connected devices: %d\n"), pServer->getConnectedCount());
+        DEBUG_PRINTF_P(PSTR("OTA address %s, type %d\n"), connInfo.getAddress().toString().c_str(), connInfo.getAddress().getType());
+        DEBUG_PRINTF_P(PSTR("ID address %s, type %d\n"), connInfo.getIdAddress().toString().c_str(), connInfo.getIdAddress().getType());
+        DEBUG_PRINTF_P(PSTR("Bonded: %s, Authenticated: %s, Encrypted: %s, Key size: %d\n"),
+                        connInfo.isBonded() ? "yes" : "no",
+                        connInfo.isAuthenticated() ? "yes" : "no",
+                        connInfo.isEncrypted() ? "yes" : "no",
+                        connInfo.getSecKeySize());
     }
 }
 #else
 void BLEUsermod::DEBUG_STATUS(){}
 #endif
-
-// void BLEUsermod::shutdownWiFi()
-// {
-//   if(apActive) {
-//     WLED::instance().shutdownAP();
-//   }
-//   if (WiFi.isConnected()) {
-//     WiFi.disconnect();
-//   }
-//   wifiEnabled = false;
-//   WiFi.mode(WIFI_OFF);
-// }
-void BLEUsermod::test(NimBLEAdvertising* pAdvertising)
-{
-    DEBUG_PRINTLN(F("BLEUsermod::test() called"));
-}
 
 void BLEUsermod::setup()
 {
@@ -54,7 +46,7 @@ void BLEUsermod::setup()
         /** Initialize NimBLE and set the device name */
         if(NimBLEDevice::init(serverDescription))
         {
-            NimBLEDevice::setSecurityAuth(BLE_SM_PAIR_AUTHREQ_SC);
+            NimBLEDevice::setSecurityAuth(true, false, true);
             DEBUG_PRINTLN(F("NimBLE init'd"));
             pServer = NimBLEDevice::createServer();
             if(pServer)
@@ -68,10 +60,9 @@ void BLEUsermod::setup()
                     DEBUG_PRINTLN(F("BLE service created"));
                     pCharacteristic = pService->createCharacteristic(WLED_BLE_CHARACTERISTIC_UUID,
                                                                         NIMBLE_PROPERTY::READ |
-                                                                        NIMBLE_PROPERTY::WRITE //|
-                                                                        /** Require a secure connection for read and write access */
-                                                                        // NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
-                                                                        // NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+                                                                        NIMBLE_PROPERTY::WRITE |
+                                                                        NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+                                                                        NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
                                                                     );
                     if(pCharacteristic)
                     {
@@ -103,17 +94,7 @@ void BLEUsermod::setup()
         NimBLEAdvertising* pAdvertising = pServer->getAdvertising();
         pAdvertising->setName(serverDescription);
         pAdvertising->addServiceUUID(WLED_BLE_SERVICE_UUID);
-        DEBUG_PRINTLN(F("BLE about to pAdvertising->enableScanResponse(true)"));
-        pAdvertising->enableScanResponse(true);
-        DEBUG_PRINTLN(F("BLE starting advertising"));
-        pAdvertising->setAdvertisingCompleteCallback(std::bind(&BLEUsermod::test, this, std::placeholders::_1));
-
-        if(pAdvertising->start())
-        {
-            DEBUG_PRINTLN(F("BLE advertising started"));
-        } else {
-            DEBUG_PRINTLN(F("Unable to start BLE advertising"));
-        }
+        start();
     }
  }
   
@@ -210,11 +191,19 @@ void BLEUsermod::start()
             setup();
         else
         {
-            DEBUG_PRINTLN(F("starting BLE"));
-            if(NimBLEDevice::startAdvertising())
-                DEBUG_PRINTLN(F("BLE started"));
-            else
-                DEBUG_PRINTLN(F("BLE start failed"));
+            bool whitelistOnly = (NimBLEDevice::getWhiteListCount() > 0);
+            NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+            pAdvertising->setScanFilter(whitelistOnly, whitelistOnly);
+            DEBUG_PRINTLN(F("BLE about to pAdvertising->enableScanResponse(true)"));
+            pAdvertising->enableScanResponse(true);
+            DEBUG_PRINTLN(F("BLE starting advertising"));
+
+            if(pAdvertising->start(30 * 1000))
+            {
+                DEBUG_PRINTLN(F("BLE advertising started"));
+            } else {
+                DEBUG_PRINTLN(F("Unable to start BLE advertising"));
+            }
         }
     }
 }
@@ -239,6 +228,17 @@ void BLEUsermod::stop()
 void BLEUsermod::onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo)
 {
     DEBUG_PRINTF("Client address: %s\n", connInfo.getAddress().toString().c_str());
+    // // updateConnParams() to shorten te connection interval to
+    // // improve performance
+    // auto minInterval = 6; // 6 * 1.25 = 7.5ms
+    // auto maxInterval = minInterval;
+    // auto latency_packets = 0;
+    // auto timeout = 10; // 10 * 10ms = 100ms
+    // pServer->updateConnParams(connInfo.getConnHandle(),
+    //                             minInterval,
+    //                             maxInterval,
+    //                             latency_packets,
+    //                             timeout);
     pServer->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 180);
 }
 
@@ -265,6 +265,7 @@ void BLEUsermod::onAuthenticationComplete(NimBLEConnInfo& connInfo)
     }
 
     DEBUG_PRINTF("Secured connection to: %s\n", connInfo.getAddress().toString().c_str());
+    NimBLEDevice::whiteListAdd(connInfo.getAddress());
 }
 
 // NimBLECharacteristicCallbacks overrides
@@ -327,6 +328,14 @@ void BLEUsermod::onRead(NimBLEDescriptor* pDescriptor, NimBLEConnInfo& connInfo)
     DEBUG_PRINTLN();
 }
 
+// Advertising Complete Callback
+void BLEUsermod::onAdvComplete(NimBLEAdvertising* pAdvertising)
+{
+    DEBUG_PRINTLN(F("Advertising stopped"));
+    if(pServer->getConnectedCount()) return;
+
+    DEBUG_PRINTLN(F("Add code here to manage automatic advertising startup..."));
+}
 
 const char BLEUsermod::_name[]       PROGMEM = "BLE";
 const char BLEUsermod::_enabled[]    PROGMEM = "enabled";
