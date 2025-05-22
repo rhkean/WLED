@@ -265,7 +265,14 @@ void BLEUsermod::onAuthenticationComplete(NimBLEConnInfo& connInfo)
     }
 
     DEBUG_PRINTF("Secured connection to: %s\n", connInfo.getAddress().toString().c_str());
-    NimBLEDevice::whiteListAdd(connInfo.getAddress());
+    if(connInfo.isBonded())
+    {
+        DEBUG_PRINTLN(F("whitelisting client"));
+        NimBLEDevice::whiteListAdd(connInfo.getAddress());
+        NimBLEDevice::whiteListAdd(connInfo.getIdAddress());
+    } else {
+        DEBUG_PRINTLN(F("client not bonded"));
+    }
 }
 
 // NimBLECharacteristicCallbacks overrides
@@ -318,14 +325,12 @@ void BLEUsermod::onSubscribe(NimBLECharacteristic* pCharacteristic, NimBLEConnIn
 void BLEUsermod::onWrite(NimBLEDescriptor* pDescriptor, NimBLEConnInfo& connInfo)
 {
     std::string dscVal = pDescriptor->getValue();
-    DEBUG_PRINTF("Descriptor written value: %s", dscVal.c_str());
-    DEBUG_PRINTLN();
+    DEBUG_PRINTF_P(PSTR("Descriptor written value: %s"), dscVal.c_str());
 }
 
 void BLEUsermod::onRead(NimBLEDescriptor* pDescriptor, NimBLEConnInfo& connInfo)
 {
-    DEBUG_PRINTF("%s Descriptor read", pDescriptor->getUUID().toString().c_str());
-    DEBUG_PRINTLN();
+    DEBUG_PRINTF_P(PSTR("%s Descriptor read"), pDescriptor->getUUID().toString().c_str());
 }
 
 // Advertising Complete Callback
