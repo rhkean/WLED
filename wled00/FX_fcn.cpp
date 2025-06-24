@@ -678,11 +678,9 @@ void IRAM_ATTR_YN Segment::setPixelColor(int i, uint32_t col) const
     // check if this is a virtual strip
     #ifndef WLED_DISABLE_2D
     vStrip = i>>16; // hack to allow running on virtual strips (2D segment columns/rows)
-    i &= 0xFFFF;    //truncate vstrip index
-    if (i >= vL) return;  // if pixel would still fall out of segment just exit
-    #else
-    return;
     #endif
+    i &= 0xFFFF;          // truncate vstrip index. note: vStrip index is 1 even in 1D, still need to truncate
+    if (i >= vL) return;  // if pixel would still fall out of segment just exit
   }
 
 #ifndef WLED_DISABLE_2D
@@ -1459,7 +1457,8 @@ void WS2812FX::blendSegment(const Segment &topSegment) const {
         const int maxX = std::min(x + topSegment.grouping, width);
         const int maxY = std::min(y + topSegment.grouping, height);
         while (y < maxY) {
-          while (x < maxX) setMirroredPixel(x++, y, c_a, opacity);
+          int _x = x;
+          while (_x < maxX) setMirroredPixel(_x++, y, c_a, opacity);
           y++;
         }
       }
