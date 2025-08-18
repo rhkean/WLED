@@ -28,7 +28,7 @@ class BLEUsermod : public Usermod
     NimBLEService*        pService              = nullptr;
     NimBLECharacteristic* pStateCharacteristic  = nullptr;
  
-    std::vector<char> _stateCharacteristicBuffer;
+    std::string _stateCharacteristicBuffer;
     
     //void shutdownWiFi();
     void DEBUG_STATUS();

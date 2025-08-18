@@ -120,12 +120,8 @@ void BLEUsermod::loop()
         serializeState(stateDoc);
         JsonObject info  = pDoc->createNestedObject("info");
         serializeInfo(info);
-        serializeJson(*pDoc, stateString);
-        _stateCharacteristicBuffer.clear();
-        _stateCharacteristicBuffer.resize(stateString.length());
-        std::vector<char> _stateCharacteristicBuffer(stateString.begin(), stateString.end());
-
-        pStateCharacteristic->setValue<std::vector<char>>(_stateCharacteristicBuffer);
+        serializeJson(*pDoc, _stateCharacteristicBuffer);
+        pStateCharacteristic->setValue(_stateCharacteristicBuffer);
         lastTime = millis();
     }
 }
