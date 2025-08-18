@@ -58,17 +58,17 @@ void BLEUsermod::setup()
                 if(pService)
                 {
                     DEBUG_PRINTLN(F("BLE service created"));
-                    pCharacteristic = pService->createCharacteristic(WLED_BLE_CHARACTERISTIC_UUID,
+                    pStateCharacteristic = pService->createCharacteristic(WLED_BLE_STATE_CHARACTERISTIC_UUID,
                                                                         NIMBLE_PROPERTY::READ |
                                                                         NIMBLE_PROPERTY::WRITE |
                                                                         NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
                                                                         NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
                                                                     );
-                    if(pCharacteristic)
+                    if(pStateCharacteristic)
                     {
                         DEBUG_PRINTLN(F("BLE characteristic created"));
-                        pCharacteristic->setValue("WLED");
-                        pCharacteristic->setCallbacks(this);
+                        pStateCharacteristic->setValue("WLED");
+                        pStateCharacteristic->setCallbacks(this);
                         if(pService->start())
                         {
                             DEBUG_PRINTLN(F("BLE service started"));
@@ -114,15 +114,18 @@ void BLEUsermod::loop()
     }
 
     if (millis() - lastTime > 2000 / portTICK_PERIOD_MS) {
-        if (pServer->getConnectedCount()) {
-            NimBLEService* pSvc = pServer->getServiceByUUID(WLED_BLE_SERVICE_UUID);
-            if (pSvc) {
-                NimBLECharacteristic* pChr = pSvc->getCharacteristic(WLED_BLE_CHARACTERISTIC_UUID);
-                if (pChr) {
-                    pChr->notify();
-                }
-            }
-        }
+        String stateString;
+        pDoc->clear();
+        JsonObject stateDoc = pDoc->createNestedObject("state");
+        serializeState(stateDoc);
+        JsonObject info  = pDoc->createNestedObject("info");
+        serializeInfo(info);
+        serializeJson(*pDoc, stateString);
+        _stateCharacteristicBuffer.clear();
+        _stateCharacteristicBuffer.resize(stateString.length());
+        std::vector<char> _stateCharacteristicBuffer(stateString.begin(), stateString.end());
+
+        pStateCharacteristic->setValue<std::vector<char>>(_stateCharacteristicBuffer);
         lastTime = millis();
     }
 }

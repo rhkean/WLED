@@ -3,9 +3,10 @@
 #define USERMOD_BLE_H
 
 #define WLED_BLE_SERVICE_UUID        "01FA0001-46C9-4507-84BB-F2BE3F24C47A"
-#define WLED_BLE_CHARACTERISTIC_UUID "01FA0002-46C9-4507-84BB-F2BE3F24C47A"
+#define WLED_BLE_STATE_CHARACTERISTIC_UUID "01FA0002-46C9-4507-84BB-F2BE3F24C47A"
 #include "wled.h"
 #include "NimBLEDevice.h"
+#include <vector>
 
 class BLEUsermod : public Usermod
                         , NimBLEServerCallbacks
@@ -23,13 +24,14 @@ class BLEUsermod : public Usermod
     static const char _enabled[];
   
     // Private class members. You can declare variables and functions only accessible to your usermod here
-    NimBLEServer*         pServer             = nullptr;
-    NimBLEService*        pService            = nullptr;
-    NimBLECharacteristic* pCharacteristic     = nullptr;
+    NimBLEServer*         pServer               = nullptr;
+    NimBLEService*        pService              = nullptr;
+    NimBLECharacteristic* pStateCharacteristic  = nullptr;
  
+    std::vector<char> _stateCharacteristicBuffer;
+    
     //void shutdownWiFi();
     void DEBUG_STATUS();
-    void test(NimBLEAdvertising* pAdvertising);
 
     public:
     void setup() override;
