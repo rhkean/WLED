@@ -54,33 +54,85 @@ void BLEUsermod::setup()
                 DEBUG_PRINTLN(F("BLE server created"));
                 pServer->setCallbacks(this);
                 pServer->advertiseOnDisconnect(true);
-                pService = pServer->createService(WLED_BLE_SERVICE_UUID);
-                if(pService)
+                pJsonApiService = pServer->createService(WLED_BLE_JSON_SERVICE_UUID);
+                if(pJsonApiService)
                 {
-                    DEBUG_PRINTLN(F("BLE service created"));
-                    pStateCharacteristic = pService->createCharacteristic(WLED_BLE_STATE_CHARACTERISTIC_UUID,
-                                                                        NIMBLE_PROPERTY::READ |
-                                                                        NIMBLE_PROPERTY::WRITE |
-                                                                        NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
-                                                                        NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
-                                                                    );
+                    bool allCharacteristicsInitialized = true;
+                    DEBUG_PRINTF_P(PSTR("BLE %s service created\n"), F("JSON API"));
+
+                    // Create JSON State characteristic
+                    pStateCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_STATE_CHARACTERISTIC_UUID,
+                                                                                     NIMBLE_PROPERTY::READ |
+                                                                                     NIMBLE_PROPERTY::READ_ENC   // only allow reading if paired / encrypted
+                                                                                );
                     if(pStateCharacteristic)
                     {
-                        DEBUG_PRINTLN(F("BLE characteristic created"));
-                        pStateCharacteristic->setValue("WLED");
+                        DEBUG_PRINTF_P(PSTR("BLE %s characteristic created\n"), F("state"));
                         pStateCharacteristic->setCallbacks(this);
-                        if(pService->start())
+                        updateStateCharacteristic();
+                    } else {
+                        allCharacteristicsInitialized = false;
+                        DEBUG_PRINTF_P(PSTR("Unable to create BLE %s characteristic\n"), F("state"));
+                    }
+
+                    // Create JSON Info characteristic
+                    pInfoCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_INFO_CHARACTERISTIC_UUID,
+                                                                                    NIMBLE_PROPERTY::READ |
+                                                                                    NIMBLE_PROPERTY::READ_ENC   // only allow reading if paired / encrypted
+                                                                               );
+                    if(pInfoCharacteristic)
+                    {
+                        DEBUG_PRINTF_P(PSTR("BLE %s characteristic created\n"), F("info"));
+                        pInfoCharacteristic->setCallbacks(this);
+                        updateInfoCharacteristic();
+                    } else {
+                        allCharacteristicsInitialized = false;
+                        DEBUG_PRINTF_P(PSTR("Unable to create BLE %s characteristic\n"), F("info"));
+                    }
+
+                    // Create JSON Effects characteristic
+                    pEffectsCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_EFFECTS_CHARACTERISTIC_UUID,
+                                                                                       NIMBLE_PROPERTY::READ |
+                                                                                       NIMBLE_PROPERTY::READ_ENC
+                                                                                  );
+                    if(pEffectsCharacteristic)
+                    {
+                        DEBUG_PRINTF_P(PSTR("BLE %s characteristic created\n"), F("effects"));
+                        pEffectsCharacteristic->setCallbacks(this);
+                        updateEffectsCharacteristic();
+                    } else {
+                        allCharacteristicsInitialized = false;
+                        DEBUG_PRINTF_P(PSTR("Unable to create BLE %s characteristic\n"), F("effects"));
+                    }
+
+                    // Create JSON Palettes characteristic
+                    pPalettesCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_PALETTES_CHARACTERISTIC_UUID,
+                                                                                        NIMBLE_PROPERTY::READ |
+                                                                                        NIMBLE_PROPERTY::READ_ENC
+                                                                                   );
+                    if(pPalettesCharacteristic)
+                    {
+                        DEBUG_PRINTF_P(PSTR("BLE %s characteristic created\n"), F("palettes"));
+                        pPalettesCharacteristic->setCallbacks(this);
+                        updatePalettesCharacteristic();
+                    } else {
+                        allCharacteristicsInitialized = false;
+                        DEBUG_PRINTF_P(PSTR("Unable to create BLE %s characteristic\n"), F("palettes"));
+                    }
+
+                    // if all characteristics were created successfullly, we can start the JSON API service
+                    if(allCharacteristicsInitialized)
+                    {
+                        if(pJsonApiService->start())
                         {
-                            DEBUG_PRINTLN(F("BLE service started"));
+                            DEBUG_PRINTF_P(PSTR("BLE %s service started\n"), F("JSON API"));
                             initDone = true;
                         } else {
-                            DEBUG_PRINTLN(F("Unable to start BLE service"));
+                            DEBUG_PRINTF_P(PSTR("Unable to start BLE %s service\n"), F("JSON API"));
                         }
-                    } else {
-                        DEBUG_PRINTLN(F("Unable to create BLE characteristic"));
                     }
                 } else {
-                    DEBUG_PRINTLN(F("Unable to create BLE service"));
+                    DEBUG_PRINTF_P(PSTR("Unable to create BLE %s service\n"), F("JSON API"));
                 }
             } else {
                 DEBUG_PRINTLN(F("Unable to create BLE server"));
@@ -93,7 +145,7 @@ void BLEUsermod::setup()
     {
         NimBLEAdvertising* pAdvertising = pServer->getAdvertising();
         pAdvertising->setName(serverDescription);
-        pAdvertising->addServiceUUID(WLED_BLE_SERVICE_UUID);
+        pAdvertising->addServiceUUID(WLED_BLE_JSON_SERVICE_UUID);
         start();
     }
  }
@@ -114,14 +166,8 @@ void BLEUsermod::loop()
     }
 
     if (millis() - lastTime > 2000 / portTICK_PERIOD_MS) {
-        String stateString;
-        pDoc->clear();
-        JsonObject stateDoc = pDoc->createNestedObject("state");
-        serializeState(stateDoc);
-        JsonObject info  = pDoc->createNestedObject("info");
-        serializeInfo(info);
-        serializeJson(*pDoc, _stateCharacteristicBuffer);
-        pStateCharacteristic->setValue(_stateCharacteristicBuffer);
+        updateStateCharacteristic();
+        updateInfoCharacteristic();
         lastTime = millis();
     }
 }
@@ -339,6 +385,58 @@ void BLEUsermod::onAdvComplete(NimBLEAdvertising* pAdvertising)
     if(pServer->getConnectedCount()) return;
 
     DEBUG_PRINTLN(F("Add code here to manage automatic advertising startup..."));
+}
+
+void BLEUsermod::updateStateCharacteristic()
+{
+    if(!requestJSONBufferLock(23)) {
+        Serial.printf_P(PSTR("{\"error\":%d}\n"), ERR_NOBUF);
+        return;
+    }
+    pDoc->clear();
+    JsonObject state = pDoc->createNestedObject(F("state"));
+    serializeState(state);
+    serializeJson(*pDoc, _stateCharacteristicBuffer);
+    pStateCharacteristic->setValue(_stateCharacteristicBuffer);
+    releaseJSONBufferLock();
+}
+
+void BLEUsermod::updateInfoCharacteristic()
+{
+    if(!requestJSONBufferLock(23)) {
+        Serial.printf_P(PSTR("{\"error\":%d}\n"), ERR_NOBUF);
+        return;
+    }
+    JsonObject info = pDoc->createNestedObject(F("info"));
+    serializeInfo(info);
+    serializeJson(*pDoc, _infoCharacteristicBuffer);
+    pStateCharacteristic->setValue(_infoCharacteristicBuffer);
+    releaseJSONBufferLock();
+}
+
+void BLEUsermod::updateEffectsCharacteristic()
+{
+    if(!requestJSONBufferLock(23)) {
+        Serial.printf_P(PSTR("{\"error\":%d}\n"), ERR_NOBUF);
+        return;
+    }
+    JsonArray effects = pDoc->createNestedArray(F("effects"));
+    serializeModeNames(effects);
+    serializeJson(*pDoc, _effectsCharacteristicBuffer);
+    pEffectsCharacteristic->setValue(_effectsCharacteristicBuffer);
+    releaseJSONBufferLock();
+}
+
+void BLEUsermod::updatePalettesCharacteristic()
+{
+    if(!requestJSONBufferLock(23)) {
+        Serial.printf_P(PSTR("{\"error\":%d}\n"), ERR_NOBUF);
+        return;
+    }
+    (*pDoc)[F("palettes")] = serialized((const __FlashStringHelper*)JSON_palette_names);
+    serializeJson(*pDoc, _palettesCharacteristicBuffer);
+    pPalettesCharacteristic->setValue(_palettesCharacteristicBuffer);
+    releaseJSONBufferLock();
 }
 
 const char BLEUsermod::_name[]       PROGMEM = "BLE";
