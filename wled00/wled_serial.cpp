@@ -67,10 +67,17 @@ void sendBytes(){
   }
 }
 
+// re-using code for BLE usermod since Serial and BLESerial are both Stream objects
+// rather than copying the code block (saves about 2k)
+// only the Json API block should execute for the BLE module call
 void handleSerial()
 {
   if (!(serialCanRX && Serial)) return; // arduino docs: `if (Serial)` indicates whether or not the USB CDC serial connection is open. For all non-USB CDC ports, this will always return true
+  handleSerial(Serial, serialCanTX);
+}
 
+void handleSerial(Stream &input, bool canSendResponse)
+{
   static auto state = AdaState::Header_A;
   static uint16_t count = 0;
   static uint16_t pixel = 0;
@@ -78,10 +85,10 @@ void handleSerial()
   static byte red   = 0x00;
   static byte green = 0x00;
 
-  while (Serial.available() > 0)
+  while (input.available() > 0)
   {
     yield();
-    byte next = Serial.peek();
+    byte next = input.peek();
     switch (state) {
       case AdaState::Header_A:
         if      (next == 'A')  { state = AdaState::Header_d; }
@@ -103,23 +110,23 @@ void handleSerial()
         else if (next == '{')  { //JSON API
           bool verboseResponse = false;
           if (!requestJSONBufferLock(16)) {
-            Serial.printf_P(PSTR("{\"error\":%d}\n"), ERR_NOBUF);
+            input.printf_P(PSTR("{\"error\":%d}\n"), ERR_NOBUF);
             return;
           }
-          Serial.setTimeout(100);
-          DeserializationError error = deserializeJson(*pDoc, Serial);
+          input.setTimeout(100);
+          DeserializationError error = deserializeJson(*pDoc, input);
           if (!error) {
             verboseResponse = deserializeState(pDoc->as<JsonObject>());
             //only send response if TX pin is unused for other purposes
-            if (verboseResponse && serialCanTX) {
+            if (verboseResponse && canSendResponse) {
               pDoc->clear();
               JsonObject stateDoc = pDoc->createNestedObject("state");
               serializeState(stateDoc);
               JsonObject info  = pDoc->createNestedObject("info");
               serializeInfo(info);
 
-              serializeJson(*pDoc, Serial);
-              Serial.println();
+              serializeJson(*pDoc, input);
+              input.println();
             }
           }
           releaseJSONBufferLock();
@@ -188,7 +195,7 @@ void handleSerial()
       continuousSendLED = false;
     }
 
-    Serial.read(); //discard the byte
+    input.read(); //discard the byte
   }
 
   // If Continuous Serial Streaming is enabled, send new LED data as bytes

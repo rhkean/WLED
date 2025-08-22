@@ -170,6 +170,7 @@ void BLEUsermod::loop()
     if (millis() - lastTime > 2000 / portTICK_PERIOD_MS) {
         updateStateCharacteristic();
         updateInfoCharacteristic();
+        handleSerial(SerialBLE);
         lastTime = millis();
     }
 }
