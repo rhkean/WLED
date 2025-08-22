@@ -54,7 +54,7 @@ void BLEUsermod::setup()
                 DEBUG_PRINTLN(F("BLE server created"));
                 pServer->setCallbacks(this);
                 pServer->advertiseOnDisconnect(true);
-                pJsonApiService = pServer->createService(WLED_BLE_JSON_SERVICE_UUID);
+                pJsonApiService = pServer->createService(WLED_BLE_JSON_API_SERVICE_UUID);
                 if(pJsonApiService)
                 {
                     bool allCharacteristicsInitialized = true;
@@ -120,6 +120,8 @@ void BLEUsermod::setup()
                         DEBUG_PRINTF_P(PSTR("Unable to create BLE %s characteristic\n"), F("palettes"));
                     }
 
+                    SerialBLE.begin(pServer, WLED_BLE_JSON_API_SERVICE_UUID);
+
                     // if all characteristics were created successfullly, we can start the JSON API service
                     if(allCharacteristicsInitialized)
                     {
@@ -145,7 +147,7 @@ void BLEUsermod::setup()
     {
         NimBLEAdvertising* pAdvertising = pServer->getAdvertising();
         pAdvertising->setName(serverDescription);
-        pAdvertising->addServiceUUID(WLED_BLE_JSON_SERVICE_UUID);
+        pAdvertising->addServiceUUID(WLED_BLE_JSON_API_SERVICE_UUID);
         start();
     }
  }

@@ -2,13 +2,16 @@
 #ifndef USERMOD_BLE_H
 #define USERMOD_BLE_H
 
-#define WLED_BLE_JSON_SERVICE_UUID              "01FA0001-46C9-4507-84BB-F2BE3F24C47A"
+#define BLESERIAL_USE_NIMBLE true
+
+#define WLED_BLE_JSON_API_SERVICE_UUID          "01FA0001-46C9-4507-84BB-F2BE3F24C47A"
 #define WLED_BLE_STATE_CHARACTERISTIC_UUID      "01FA0002-46C9-4507-84BB-F2BE3F24C47A"
 #define WLED_BLE_INFO_CHARACTERISTIC_UUID       "01FA0003-46C9-4507-84BB-F2BE3F24C47A"
 #define WLED_BLE_EFFECTS_CHARACTERISTIC_UUID    "01FA0004-46C9-4507-84BB-F2BE3F24C47A"
-#define WLED_BLE_PALETTES_CHARACTERISTIC_UUID    "01FA0005-46C9-4507-84BB-F2BE3F24C47A"
+#define WLED_BLE_PALETTES_CHARACTERISTIC_UUID   "01FA0005-46C9-4507-84BB-F2BE3F24C47A"
+
 #include "wled.h"
-#include "NimBLEDevice.h"
+#include <BLESerial.h>
 #include <vector>
 
 class BLEUsermod : public Usermod
@@ -38,6 +41,8 @@ class BLEUsermod : public Usermod
     std::string _infoCharacteristicBuffer;
     std::string _effectsCharacteristicBuffer;
     std::string _palettesCharacteristicBuffer;
+
+    BLESerial<> SerialBLE;
     
     //void shutdownWiFi();
     void DEBUG_STATUS();
