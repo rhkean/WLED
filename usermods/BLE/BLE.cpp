@@ -29,6 +29,11 @@ void BLEUsermod::DEBUG_STATUS(){}
 
 void BLEUsermod::setup()
 {
+    serviceUUID = NimBLEUUID(WLED_BLE_UUID_1ST_VALUE + WLED_BLE_JSON_API_SERVICE_OFFSET,
+                             WLED_BLE_UUID_2ND_VALUE,
+                             WLED_BLE_UUID_3RD_VALUE,
+                             WLED_BLE_UUID_4TH_VALUE);
+
     DEBUG_PRINTLN(F("BLEUsermod::setup called"));
     DEBUG_STATUS();
 
@@ -54,16 +59,20 @@ void BLEUsermod::setup()
                 DEBUG_PRINTLN(F("BLE server created"));
                 pServer->setCallbacks(this);
                 pServer->advertiseOnDisconnect(true);
-                pJsonApiService = pServer->createService(WLED_BLE_JSON_API_SERVICE_UUID);
+                // pJsonApiService = pServer->createService(WLED_BLE_JSON_API_SERVICE_UUID);
+                pJsonApiService = pServer->createService(serviceUUID);
                 if(pJsonApiService)
                 {
                     bool allCharacteristicsInitialized = true;
                     DEBUG_PRINTF_P(PSTR("BLE %s service created\n"), F("JSON API"));
 
                     // Create JSON State characteristic
-                    pStateCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_STATE_CHARACTERISTIC_UUID,
-                                                                                     NIMBLE_PROPERTY::READ |
-                                                                                     NIMBLE_PROPERTY::READ_ENC   // only allow reading if paired / encrypted
+                    pStateCharacteristic = pJsonApiService->createCharacteristic(NimBLEUUID(WLED_BLE_UUID_1ST_VALUE + WLED_BLE_STATE_CHARACTERISTIC_OFFSET,
+                                                                                            WLED_BLE_UUID_2ND_VALUE,
+                                                                                            WLED_BLE_UUID_3RD_VALUE,
+                                                                                            WLED_BLE_UUID_4TH_VALUE),
+                                                                                    NIMBLE_PROPERTY::READ |
+                                                                                    NIMBLE_PROPERTY::READ_ENC   // only allow reading if paired / encrypted
                                                                                 );
                     if(pStateCharacteristic)
                     {
@@ -76,7 +85,10 @@ void BLEUsermod::setup()
                     }
 
                     // Create JSON Info characteristic
-                    pInfoCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_INFO_CHARACTERISTIC_UUID,
+                    pInfoCharacteristic = pJsonApiService->createCharacteristic(NimBLEUUID(WLED_BLE_UUID_1ST_VALUE + WLED_BLE_INFO_CHARACTERISTIC_OFFSET,
+                                                                                           WLED_BLE_UUID_2ND_VALUE,
+                                                                                           WLED_BLE_UUID_3RD_VALUE,
+                                                                                           WLED_BLE_UUID_4TH_VALUE),
                                                                                     NIMBLE_PROPERTY::READ |
                                                                                     NIMBLE_PROPERTY::READ_ENC   // only allow reading if paired / encrypted
                                                                                );
@@ -91,7 +103,10 @@ void BLEUsermod::setup()
                     }
 
                     // Create JSON Effects characteristic
-                    pEffectsCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_EFFECTS_CHARACTERISTIC_UUID,
+                    pEffectsCharacteristic = pJsonApiService->createCharacteristic(NimBLEUUID(WLED_BLE_UUID_1ST_VALUE + WLED_BLE_EFFECTS_CHARACTERISTIC_OFFSET,
+                                                                                              WLED_BLE_UUID_2ND_VALUE,
+                                                                                              WLED_BLE_UUID_3RD_VALUE,
+                                                                                              WLED_BLE_UUID_4TH_VALUE),
                                                                                        NIMBLE_PROPERTY::READ |
                                                                                        NIMBLE_PROPERTY::READ_ENC
                                                                                   );
@@ -106,7 +121,10 @@ void BLEUsermod::setup()
                     }
 
                     // Create JSON Palettes characteristic
-                    pPalettesCharacteristic = pJsonApiService->createCharacteristic(WLED_BLE_PALETTES_CHARACTERISTIC_UUID,
+                    pPalettesCharacteristic = pJsonApiService->createCharacteristic(NimBLEUUID(WLED_BLE_UUID_1ST_VALUE + WLED_BLE_PALETTES_CHARACTERISTIC_OFFSET,
+                                                                                               WLED_BLE_UUID_2ND_VALUE,
+                                                                                               WLED_BLE_UUID_3RD_VALUE,
+                                                                                               WLED_BLE_UUID_4TH_VALUE),
                                                                                         NIMBLE_PROPERTY::READ |
                                                                                         NIMBLE_PROPERTY::READ_ENC
                                                                                    );
@@ -120,7 +138,7 @@ void BLEUsermod::setup()
                         DEBUG_PRINTF_P(PSTR("Unable to create BLE %s characteristic\n"), F("palettes"));
                     }
 
-                    SerialBLE.begin(pServer, WLED_BLE_JSON_API_SERVICE_UUID);
+                    SerialBLE.begin(pServer, serviceUUID.toString().c_str());
 
                     // if all characteristics were created successfullly, we can start the JSON API service
                     if(allCharacteristicsInitialized)
@@ -147,7 +165,7 @@ void BLEUsermod::setup()
     {
         NimBLEAdvertising* pAdvertising = pServer->getAdvertising();
         pAdvertising->setName(serverDescription);
-        pAdvertising->addServiceUUID(WLED_BLE_JSON_API_SERVICE_UUID);
+        pAdvertising->addServiceUUID(serviceUUID);
         start();
     }
  }
