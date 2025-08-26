@@ -10,21 +10,23 @@
 #define WLED_BLE_EFFECTS_CHARACTERISTIC_OFFSET  4   // "01FA0004-46C9-4507-84BB-F2BE3F24C47A"
 #define WLED_BLE_PALETTES_CHARACTERISTIC_OFFSET 5   // "01FA0005-46C9-4507-84BB-F2BE3F24C47A"
 
-#define WLED_BLE_UUID_1ST_VALUE 0x01FA0000UL
-#define WLED_BLE_UUID_2ND_VALUE 0x46C9U
-#define WLED_BLE_UUID_3RD_VALUE 0x4507U
-#define WLED_BLE_UUID_4TH_VALUE 0x84BBF2BE3F24C47ALLU
-
 #include "wled.h"
 #include <BLESerial.h>
 #include <vector>
+
+const uint32_t WLED_BLE_UUID_1ST_VALUE = 0x01FA0000UL;
+const uint16_t WLED_BLE_UUID_2ND_VALUE = 0x46C9U; 
+const uint16_t WLED_BLE_UUID_3RD_VALUE = 0x4507U;
+//const uint64_t WLED_BLE_UUID_4TH_VALUE = 0x84BBF2BE3F24C47ALLU;
+#define WLED_BLE_UUID_4TH_VALUE 0x84BBF2BE3F24C47ALLU
 
 class BLEUsermod : public Usermod
                         , NimBLEServerCallbacks
                         , NimBLECharacteristicCallbacks
                         , NimBLEDescriptorCallbacks
 {
-    private:    
+    private:
+
     bool                  deviceConnected     = false;
     bool                  oldDeviceConnected  = false;
     bool                  enabled             = false;
