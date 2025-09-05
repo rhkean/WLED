@@ -139,10 +139,10 @@ class BLESerial : public Stream {
     {
         NimBLEService* pService = pServer->getServiceByUUID(serviceUuid);
         if (pService == nullptr) {
-            log_d("Creating BLE service with UUID '%s'", serviceUuid);
+            DEBUG_PRINTF_P(PSTR("Creating BLE service with UUID '%s'"), serviceUuid);
             pService = pServer->createService(serviceUuid);
         } else {
-            log_w("BLE service with UUID '%s' already exists", serviceUuid);
+            DEBUG_PRINTF_P(PSTR("BLE service with UUID '%s' already exists"), serviceUuid);
         }
 
         // Store the service, so we know if we're managing it
@@ -151,7 +151,7 @@ class BLESerial : public Stream {
         this->begin(pService, rxUuid, txUuid);
 
         pService->start();
-        log_d("Started BLE service");
+        DEBUG_PRINTF_P(PSTR("Started BLE service\n"));
     }
 
     /**
@@ -167,19 +167,25 @@ class BLESerial : public Stream {
     {
         auto* pRxCharacteristic = pService->getCharacteristic(rxUuid);
         if (pRxCharacteristic == nullptr) {
-            log_d("Creating BLE characteristic with UUIDs '%s' (RX)", rxUuid);
+            DEBUG_PRINTF_P(PSTR("Creating BLE characteristic with UUIDs '%s' (RX)"), rxUuid);
             pRxCharacteristic =
-              pService->createCharacteristic(rxUuid, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+              pService->createCharacteristic(rxUuid,
+                                             NIMBLE_PROPERTY::WRITE
+                                             | NIMBLE_PROPERTY::WRITE_NR,
+                                             2048);
         } else {
-            log_w("BLE characteristic with UUID '%s' (RX) already exists", rxUuid);
+            DEBUG_PRINTF_P(PSTR("BLE characteristic with UUID '%s' (RX) already exists"), rxUuid);
         }
 
         auto* pTxCharacteristic = pService->getCharacteristic(txUuid);
         if (pTxCharacteristic == nullptr) {
-            log_d("Creating BLE characteristic with UUIDs '%s' (TX)", txUuid);
-            pTxCharacteristic = pService->createCharacteristic(txUuid, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+            DEBUG_PRINTF_P(PSTR("Creating BLE characteristic with UUIDs '%s' (TX)"), txUuid);
+            pTxCharacteristic = pService->createCharacteristic(txUuid,
+                                                               NIMBLE_PROPERTY::READ
+                                                               | NIMBLE_PROPERTY::NOTIFY,
+                                                               2048);
         } else {
-            log_w("BLE characteristic with UUID '%s' (TX) already exists", txUuid);
+            DEBUG_PRINTF_P(PSTR("BLE characteristic with UUID '%s' (TX) already exists"), txUuid);
         }
 
         this->begin(pRxCharacteristic, pTxCharacteristic);
@@ -253,8 +259,9 @@ template<typename T>
 void BLESerial<T>::begin(const char* deviceName, const char* serviceUuid, const char* rxUuid, const char* txUuid)
 {
     // Create the BLE Device
-    log_d("Initializing BLE device with name '%s'", deviceName);
+    DEBUG_PRINTF_P(PSTR("Initializing BLE device with name '%s'"), deviceName);
     NimBLEDevice::init(deviceName);
+    NimBLEDevice::setMTU(512);
 
     log_d("Creating BLE server");
     NimBLEServer* pServer = NimBLEDevice::createServer();
@@ -268,7 +275,7 @@ void BLESerial<T>::begin(const char* deviceName, const char* serviceUuid, const 
     NimBLEAdvertising* pAdvertising = pServer->getAdvertising();
     pAdvertising->setName(deviceName);
     pAdvertising->start();
-    log_d("Started BLE advertising");
+    DEBUG_PRINTF_P(PSTR("Started BLE advertising\n"));
 }
 
 template<typename T>

@@ -4,6 +4,7 @@
 #ifdef WLED_DEBUG
 void BLEUsermod::DEBUG_STATUS()
 {
+    DEBUG_PRINTLN("*********************************************");
     DEBUG_PRINTF_P(PSTR("WLED_CONNECTED: %d\n"), WLED_CONNECTED);
     DEBUG_PRINTF_P(PSTR("WiFi.isConnected: %d\n"), WiFi.isConnected());
     DEBUG_PRINTF_P(PSTR("apBehavior: %d\n"), apBehavior);
@@ -11,6 +12,7 @@ void BLEUsermod::DEBUG_STATUS()
     DEBUG_PRINTF_P(PSTR("WiFi status: %d\n"), WiFi.status());
     DEBUG_PRINTF_P(PSTR("BLE enabled: %d\n"), enabled);
     DEBUG_PRINTF_P(PSTR("BLE connected: %d\n"), SerialBLE.connected());
+    DEBUG_PRINTLN("*********************************************");
     // if(initDone)
     // {
     //     NimBLEConnInfo connInfo = pServer->getPeerInfo(0);
@@ -33,10 +35,10 @@ void BLEUsermod::setup() {
     uint8_t mac[6];
     // Read the Bluetooth MAC address
     esp_err_t status = esp_read_mac(mac, ESP_MAC_BT);
-    char macStr[18] = { 0 };
-    sprintf(macStr, "WLED_%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    char deviceName[19] = { 0 };
+    snprintf(deviceName, sizeof(deviceName), "WLED_%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     enabled = true;
-    DEBUG_PRINTF_P(PSTR("macStr: %s\n"), macStr);
+    DEBUG_PRINTF_P(PSTR("deviceName: %s\n"), deviceName);
     // serviceUUID = NimBLEUUID(WLED_BLE_UUID_1ST_VALUE + WLED_BLE_JSON_API_SERVICE_OFFSET,
     //                          WLED_BLE_UUID_2ND_VALUE,
     //                          WLED_BLE_UUID_3RD_VALUE,
@@ -50,7 +52,7 @@ void BLEUsermod::setup() {
     
     if(!initDone) {
         // SerialBLE.begin(macStr);
-        SerialBLE.begin(macStr);
+        SerialBLE.begin(deviceName);
         /** Initialize NimBLE and set the device name */
         // if(NimBLEDevice::init(serverDescription)) {
         //     NimBLEDevice::setSecurityAuth(true, true, true);
