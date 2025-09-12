@@ -274,11 +274,8 @@ void WLED::loop()
     #ifdef USERMOD_BLE
     BLEUsermod* ble = (BLEUsermod*)UsermodManager::lookup(USERMOD_ID_BLE);
     DEBUG_PRINTF_P(PSTR("BLE enabled: %d\n"), ble->isEnabled());
-    if(ble->isEnabled())
-    {
-      DEBUG_PRINTF_P(PSTR("BLE advertising started: %d\n"), ble->isAdvertising());
-      DEBUG_PRINTF_P(PSTR("BLE connected clients: %d\n"), ble->isConnected());
-    }
+    DEBUG_PRINTF_P(PSTR("BLE advertising: %d\n"), ble->isAdvertising());
+    ble->DEBUG_STATUS();
     #endif
     strip.printSize();
     server.printStatus(DEBUGOUT);

@@ -89,25 +89,13 @@ void handleSerial(Stream &serialStream, bool canSendResponse)
   {
     yield();
     byte next = serialStream.peek();
-    DEBUG_PRINTLN("*********************************************");
-    DEBUG_PRINTF_P(PSTR("Serial Peek: %c\n"), next);
-    DEBUG_PRINTLN("*********************************************");
     switch (state) {
       case AdaState::Header_A:
         if      (next == 'A')  { state = AdaState::Header_d; }
         else if (next == 0xC9) { state = AdaState::TPM2_Header_Type; } //TPM2 start byte
         else if (next == 'I')  { handleImprovPacket(); return; }
-        else if (next == 'v')  { serialStream.print("WLED"); serialStream.write(' '); serialStream.println(VERSION); }
-        else if (next == 'r')  {
-          char buffer[100] = "ugh!\0";
-          DEBUG_PRINTLN(F("TEST"));
-          int overflow = snprintf(buffer, sizeof(buffer), "WLED\n*********************************************\n%d\n", VERSION);
-          DEBUG_PRINTLN(buffer);
-          DEBUG_PRINTF_P(PSTR("buffer size: %d"), sizeof(buffer));
-          DEBUG_PRINTF_P(PSTR("overflow: %d\n"), overflow);
-          serialStream.write(buffer, overflow); 
-          // serialStream.print(buffer);
-        }
+        // else if (next == 'v')  { serialStream.print("WLED"); serialStream.write(' '); serialStream.println(VERSION); }
+        else if (next == 'v')  { serialStream.printf(PSTR("WLED %d\n"), VERSION); }
         else if (next == 0xB0) { updateBaudRate( 115200); }
         else if (next == 0xB1) { updateBaudRate( 230400); }
         else if (next == 0xB2) { updateBaudRate( 460800); }
@@ -127,6 +115,7 @@ void handleSerial(Stream &serialStream, bool canSendResponse)
             return;
           }
           serialStream.setTimeout(100);
+          pDoc->clear();
           DeserializationError error = deserializeJson(*pDoc, serialStream);
           if (!error) {
             verboseResponse = deserializeState(pDoc->as<JsonObject>());
@@ -137,13 +126,12 @@ void handleSerial(Stream &serialStream, bool canSendResponse)
               serializeState(stateDoc);
               JsonObject info  = pDoc->createNestedObject("info");
               serializeInfo(info);
-
-              serializeJson(*pDoc, Serial);
               serializeJson(*pDoc, serialStream);
               serialStream.println();
             }
           }
           releaseJSONBufferLock();
+          continue;
         }
         break;
       case AdaState::Header_d:
@@ -208,10 +196,8 @@ void handleSerial(Stream &serialStream, bool canSendResponse)
     if (continuousSendLED && next != 'O'){
       continuousSendLED = false;
     }
-
     serialStream.read(); //discard the byte
   }
-
   // If Continuous Serial Streaming is enabled, send new LED data as bytes
   if (continuousSendLED && (lastUpdate != strip.getLastShow())){
     sendBytes();
