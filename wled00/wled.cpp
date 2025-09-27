@@ -11,6 +11,10 @@
 #include "soc/rtc_cntl_reg.h"
 #endif
 
+#ifdef USERMOD_BLE
+#include "BLE.h"
+#endif
+
 extern "C" void usePWMFixedNMI();
 
 /*
@@ -261,6 +265,9 @@ void WLED::loop()
     DEBUG_PRINTF_P(PSTR("State time: %lu\n"),        wifiStateChangedTime);
     DEBUG_PRINTF_P(PSTR("NTP last sync: %lu\n"),     ntpLastSyncTime);
     DEBUG_PRINTF_P(PSTR("Client IP: %u.%u.%u.%u\n"), Network.localIP()[0], Network.localIP()[1], Network.localIP()[2], Network.localIP()[3]);
+    #ifdef USERMOD_BLE
+    static_cast<BLEUsermod*>(UsermodManager::lookup(USERMOD_ID_BLE))->DEBUG_STATUS();
+    #endif
     if (loops > 0) { // avoid division by zero
       DEBUG_PRINTF_P(PSTR("Loops/sec: %u\n"),         loops / 30);
       DEBUG_PRINTF_P(PSTR("Loop time[ms]: %u/%lu\n"), avgLoopMillis/loops,    maxLoopMillis);
@@ -828,7 +835,7 @@ void WLED::handleConnection()
       initConnection();
     }
     if (!apActive && now - lastReconnectAttempt > 12000 && (!wasConnected || apBehavior == AP_BEHAVIOR_NO_CONN)) {
-      if (!(apBehavior == AP_BEHAVIOR_TEMPORARY && now > WLED_AP_TIMEOUT)) {
+      if (!(apBehavior == AP_BEHAVIOR_TEMPORARY && now > WLED_AP_TIMEOUT) && (apBehavior != AP_BEHAVIOR_BUTTON_ONLY)) {
         DEBUG_PRINTF_P(PSTR("Not connected AP (@ %lus).\n"), nowS);
         initAP();  // start AP only within first 5min
       }

@@ -1,0 +1,14 @@
+{
+    "name:": "BLE",
+    "build": {
+      "libArchive": false,
+      "extraScript": "setup_deps.py"
+    },
+    "dependencies": [
+      {
+        "owner": "h2zero",      
+        "name": "NimBLE-Arduino",
+        "version": "~2.2.3"
+      }
+    ]
+}
