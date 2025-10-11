@@ -26,7 +26,7 @@ const packageJson = require("../package.json");
 // Export functions for testing
 module.exports = { isFileNewerThan, isAnyFileInFolderNewerThan };
 
-const output = ["wled00/html_ui.h", "wled00/html_pixart.h", "wled00/html_cpal.h", "wled00/html_pxmagic.h", "wled00/html_settings.h", "wled00/html_other.h"]
+const output = ["wled00/html_ui.cpp", "wled00/html_pixart.cpp", "wled00/html_cpal.cpp", "wled00/html_pxmagic.cpp", "wled00/html_settings.cpp", "wled00/html_other.cpp"]
 
 // \x1b[34m is blue, \x1b[36m is cyan, \x1b[0m is reset
 const wledBanner = `
@@ -45,7 +45,8 @@ const singleHeader = `/*
  * Please see https://kno.wled.ge/advanced/custom-features/#changing-web-ui
  * to find out how to easily modify the web UI source!
  */
- 
+ #include "html.h"
+
 `;
 
 const multiHeader = `/*
@@ -55,6 +56,8 @@ const multiHeader = `/*
  * Instead, see https://kno.wled.ge/advanced/custom-features/#changing-web-ui
  * to find out how to easily modify the web UI source!
  */
+#include "html.h"
+
 `;
 
 function hexdump(buffer, isHex = false) {
@@ -143,7 +146,7 @@ async function writeHtmlGzipped(sourceFile, resultFile, page) {
       console.info("Minified and compressed " + sourceFile + " from " + originalLength + " to " + result.length + " bytes");
       const array = hexdump(result);
       let src = singleHeader;
-      src += `const uint16_t PAGE_${page}_L = ${result.length};\n`;
+      src += `const uint16_t PAGE_${page}_length = ${result.length};\n`;
       src += `const uint8_t PAGE_${page}[] PROGMEM = {\n${array}\n};\n\n`;
       console.info("Writing " + resultFile);
       fs.writeFileSync(resultFile, src);
@@ -242,10 +245,10 @@ if (isAlreadyBuilt("wled00/data") && process.argv[2] !== '--force' && process.ar
   return;
 }
 
-writeHtmlGzipped("wled00/data/index.htm", "wled00/html_ui.h", 'index');
-writeHtmlGzipped("wled00/data/pixart/pixart.htm", "wled00/html_pixart.h", 'pixart');
-writeHtmlGzipped("wled00/data/cpal/cpal.htm", "wled00/html_cpal.h", 'cpal');
-writeHtmlGzipped("wled00/data/pxmagic/pxmagic.htm", "wled00/html_pxmagic.h", 'pxmagic');
+writeHtmlGzipped("wled00/data/index.htm", "wled00/html_ui.cpp", 'index');
+writeHtmlGzipped("wled00/data/pixart/pixart.htm", "wled00/html_pixart.cpp", 'pixart');
+writeHtmlGzipped("wled00/data/cpal/cpal.htm", "wled00/html_cpal.cpp", 'cpal');
+writeHtmlGzipped("wled00/data/pxmagic/pxmagic.htm", "wled00/html_pxmagic.cpp", 'pxmagic');
 
 writeChunks(
   "wled00/data",
@@ -332,7 +335,7 @@ writeChunks(
       filter: "html-minify"
     }
   ],
-  "wled00/html_settings.h"
+  "wled00/html_settings.cpp"
 );
 
 writeChunks(
@@ -412,5 +415,5 @@ const char PAGE_dmxmap[] PROGMEM = R"=====()=====";
       method: "binary",
     }
   ],
-  "wled00/html_other.h"
+  "wled00/html_other.cpp"
 );
